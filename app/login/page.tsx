@@ -37,7 +37,7 @@ export default function LoginPage() {
           PRM Timeline Access
         </h1>
         <p className="mb-6 text-sm text-gray-600">
-          Enter the shared password to continue.
+         Hi, this is an internal tool built for the PRM teams to easily extract notes from our deprecated system, Gainsight. This is a temporary measure and should not be shared with anyone, either internally or externally.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
