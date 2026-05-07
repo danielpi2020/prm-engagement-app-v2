@@ -1,65 +1,226 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+
+type Engagement = {
+  id: number;
+  activity_date: string | null;
+  activity_year: number | null;
+  subject: string | null;
+  account_name: string | null;
+  notes: string | null;
+  notes_plain_text: string | null;
+  external_attendees: string | null;
+  internal_attendees: string | null;
+  type_name: string | null;
+};
+
+function formatDate(dateString: string | null) {
+  if (!dateString) return 'No date';
+
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+export default function HomePage() {
+  const [accounts, setAccounts] = useState<string[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState('');
+  const [yearFilter, setYearFilter] = useState('2026');
+  const [engagements, setEngagements] = useState<Engagement[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [loadingEngagements, setLoadingEngagements] = useState(false);
+
+  useEffect(() => {
+    async function fetchAccounts() {
+      setLoadingAccounts(true);
+
+      const query1 = await supabase
+        .from('unique_accounts')
+        .select('account_name')
+        .order('account_name', { ascending: true })
+        .range(0, 999);
+
+      const query2 = await supabase
+        .from('unique_accounts')
+        .select('account_name')
+        .order('account_name', { ascending: true })
+        .range(1000, 1999);
+
+      const combinedData = [
+        ...(query1.data || []),
+        ...(query2.data || []),
+      ];
+
+      const combinedError = query1.error || query2.error;
+
+      if (combinedError) {
+        console.error('Error loading accounts:', combinedError);
+        setLoadingAccounts(false);
+        return;
+      }
+
+      const uniqueAccounts = Array.from(
+        new Set(
+          combinedData
+            .map((row) => row.account_name)
+            .filter((name): name is string => Boolean(name))
+        )
+      ).sort((a, b) => a.localeCompare(b));
+
+      setAccounts(uniqueAccounts);
+      setLoadingAccounts(false);
+    }
+
+    fetchAccounts();
+  }, []);
+
+  useEffect(() => {
+    async function loadEngagements() {
+      if (!selectedAccount) {
+        setEngagements([]);
+        return;
+      }
+
+      setLoadingEngagements(true);
+
+      let query = supabase
+        .from('engagements')
+        .select(`
+          id,
+          activity_date,
+          activity_year,
+          subject,
+          account_name,
+          notes,
+          notes_plain_text,
+          external_attendees,
+          internal_attendees,
+          type_name
+        `)
+        .eq('account_name', selectedAccount)
+        .order('activity_date', { ascending: false });
+
+      if (yearFilter !== 'all') {
+        query = query.eq('activity_year', Number(yearFilter));
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error loading engagements:', error);
+        setEngagements([]);
+      } else {
+        setEngagements(data || []);
+      }
+
+      setLoadingEngagements(false);
+    }
+
+    loadEngagements();
+  }, [selectedAccount, yearFilter]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-5xl">
+        <h1 className="mb-6 text-3xl font-bold text-gray-900">
+          PRM Engagement Timeline
+        </h1>
+
+        <div className="mb-6 grid gap-4 rounded-xl bg-white p-4 shadow-sm md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Select account
+            </label>
+            {loadingAccounts ? (
+              <p className="text-sm text-gray-500">Loading accounts...</p>
+            ) : (
+              <select
+                value={selectedAccount}
+                onChange={(e) => setSelectedAccount(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 p-3"
+              >
+                <option value="">Choose an account</option>
+                {accounts.map((account) => (
+                  <option key={account} value={account}>
+                    {account}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Year
+            </label>
+            <select
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 p-3"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+              <option value="all">All</option>
+            </select>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        {selectedAccount && (
+          <div className="mb-4 text-sm text-gray-600">
+            Showing results for{' '}
+            <span className="font-semibold">{selectedAccount}</span>
+          </div>
+        )}
+
+        {loadingEngagements ? (
+          <p className="text-gray-500">Loading timeline...</p>
+        ) : engagements.length === 0 ? (
+          <div className="rounded-xl bg-white p-6 shadow-sm text-gray-500">
+            {selectedAccount
+              ? 'No engagements found for this selection.'
+              : 'Select an account to view engagement history.'}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {engagements.map((item) => {
+              const noteContent =
+                item.notes_plain_text || item.notes || 'No notes available';
+
+              return (
+                <section
+                  key={item.id}
+                  className="rounded-xl bg-white p-5 shadow-sm"
+                >
+                  <h2 className="mb-3 text-xl font-semibold text-gray-900">
+                    {formatDate(item.activity_date)} — {item.type_name || 'Unknown Type'} |{' '}
+                    {item.subject || 'No Subject'}
+                  </h2>
+
+                  <div className="mb-3 space-y-1 text-sm text-gray-600">
+                    <p>
+                      <span className="font-medium">External Attendees:</span>{' '}
+                      {item.external_attendees || '—'}
+                    </p>
+                    <p>
+                      <span className="font-medium">Internal Attendees:</span>{' '}
+                      {item.internal_attendees || '—'}
+                    </p>
+                  </div>
+
+                  <div className="whitespace-pre-wrap text-sm leading-6 text-gray-800">
+                    {noteContent}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
