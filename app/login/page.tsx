@@ -33,10 +33,10 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow">
-        <h1 className="mb-4 text-2xl font-bold text-gray-900">
+        <h1 className="mb-4 text-2xl font-bold text-black">
           PRM Timeline Access
         </h1>
-        <p className="mb-6 text-sm text-gray-600">
+        <p className="mb-6 text-sm text-black">
          Hi, this is an internal tool built for the PRM teams to easily extract notes from our deprecated system, Gainsight. This is a temporary measure and should not be shared with anyone, either internally or externally.
         </p>
 

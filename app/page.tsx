@@ -30,6 +30,8 @@ function formatDate(dateString: string | null) {
 export default function HomePage() {
   const [accounts, setAccounts] = useState<string[]>([]);
   const [selectedAccount, setSelectedAccount] = useState('');
+  const [accountSearch, setAccountSearch] = useState('');
+  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
   const [yearFilter, setYearFilter] = useState('2026');
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
@@ -124,6 +126,14 @@ export default function HomePage() {
     loadEngagements();
   }, [selectedAccount, yearFilter]);
 
+  const filteredAccounts = accountSearch
+    ? accounts
+        .filter((account) =>
+          account.toLowerCase().includes(accountSearch.toLowerCase())
+        )
+        .slice(0, 20)
+    : [];
+
   return (
     <main className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-5xl">
@@ -132,30 +142,60 @@ export default function HomePage() {
         </h1>
 
         <div className="mb-6 grid gap-4 rounded-xl bg-white p-4 shadow-sm md:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+          <div className="relative">
+            <label className="mb-2 block text-sm font-medium text-black">
               Select account
             </label>
             {loadingAccounts ? (
-              <p className="text-sm text-gray-500">Loading accounts...</p>
+              <p className="text-sm text-black">Loading accounts...</p>
             ) : (
-              <select
-                value={selectedAccount}
-                onChange={(e) => setSelectedAccount(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 p-3"
-              >
-                <option value="">Choose an account</option>
-                {accounts.map((account) => (
-                  <option key={account} value={account}>
-                    {account}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <input
+                  value={accountSearch}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setAccountSearch(value);
+                    if (value !== selectedAccount) {
+                      setSelectedAccount('');
+                    }
+                  }}
+                  onFocus={() => setAccountDropdownOpen(true)}
+                  onBlur={() =>
+                    setTimeout(() => setAccountDropdownOpen(false), 150)
+                  }
+                  className="w-full rounded-lg border border-gray-300 p-3"
+                  placeholder="Search accounts"
+                />
+                {accountDropdownOpen && accountSearch && (
+                  <div className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                    {filteredAccounts.length > 0 ? (
+                      filteredAccounts.map((account) => (
+                        <button
+                          key={account}
+                          type="button"
+                          onMouseDown={() => {
+                            setSelectedAccount(account);
+                            setAccountSearch(account);
+                            setAccountDropdownOpen(false);
+                          }}
+                          className="block w-full px-3 py-2 text-left text-sm text-black hover:bg-gray-100"
+                        >
+                          {account}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        No matching accounts
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-sm font-medium text-black">
               Year
             </label>
             <select
@@ -171,16 +211,16 @@ export default function HomePage() {
         </div>
 
         {selectedAccount && (
-          <div className="mb-4 text-sm text-gray-600">
+          <div className="mb-4 text-sm text-black">
             Showing results for{' '}
             <span className="font-semibold">{selectedAccount}</span>
           </div>
         )}
 
         {loadingEngagements ? (
-          <p className="text-gray-500">Loading timeline...</p>
+          <p className="text-black">Loading timeline...</p>
         ) : engagements.length === 0 ? (
-          <div className="rounded-xl bg-white p-6 shadow-sm text-gray-500">
+          <div className="rounded-xl bg-white p-6 shadow-sm text-black">
             {selectedAccount
               ? 'No engagements found for this selection.'
               : 'Select an account to view engagement history.'}
@@ -201,7 +241,7 @@ export default function HomePage() {
                     {item.subject || 'No Subject'}
                   </h2>
 
-                  <div className="mb-3 space-y-1 text-sm text-gray-600">
+                  <div className="mb-3 space-y-1 text-sm text-black">
                     <p>
                       <span className="font-medium">External Attendees:</span>{' '}
                       {item.external_attendees || '—'}
@@ -212,7 +252,7 @@ export default function HomePage() {
                     </p>
                   </div>
 
-                  <div className="whitespace-pre-wrap text-sm leading-6 text-gray-800">
+                  <div className="whitespace-pre-wrap text-sm leading-6 text-black">
                     {noteContent}
                   </div>
                 </section>
